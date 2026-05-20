@@ -18,7 +18,9 @@ exports.default = async function afterPack(context) {
     return;
   }
 
-  console.log('🧹 Cleaning invalid symlinks and cache directories before signing...');
+  console.log(
+    '🧹 Cleaning invalid symlinks and cache directories before signing...'
+  );
 
   const resourcesPath = path.join(appPath, 'Contents', 'Resources');
   const prebuiltPath = path.join(resourcesPath, 'prebuilt');
@@ -64,13 +66,23 @@ exports.default = async function afterPack(context) {
       const entries = fs.readdirSync(venvLibPath, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.isDirectory() && entry.name.startsWith('python')) {
-          const flacMacPath = path.join(venvLibPath, entry.name, 'site-packages', 'speech_recognition', 'flac-mac');
+          const flacMacPath = path.join(
+            venvLibPath,
+            entry.name,
+            'site-packages',
+            'speech_recognition',
+            'flac-mac'
+          );
           if (fs.existsSync(flacMacPath)) {
-            console.log(`Removing flac-mac binary (outdated SDK): ${flacMacPath}`);
+            console.log(
+              `Removing flac-mac binary (outdated SDK): ${flacMacPath}`
+            );
             try {
               fs.unlinkSync(flacMacPath);
             } catch (error) {
-              console.warn(`Warning: Could not remove flac-mac: ${error.message}`);
+              console.warn(
+                `Warning: Could not remove flac-mac: ${error.message}`
+              );
             }
           }
         }
@@ -83,7 +95,13 @@ exports.default = async function afterPack(context) {
   // Clean Python symlinks in venv/bin
   const venvBinDir = path.join(prebuiltPath, 'venv', 'bin');
   if (fs.existsSync(venvBinDir)) {
-    const pythonNames = ['python', 'python3', 'python3.10', 'python3.11', 'python3.12'];
+    const pythonNames = [
+      'python',
+      'python3',
+      'python3.10',
+      'python3.11',
+      'python3.12',
+    ];
     const bundlePath = path.resolve(appPath);
 
     for (const pythonName of pythonNames) {
@@ -94,7 +112,10 @@ exports.default = async function afterPack(context) {
           const stats = fs.lstatSync(pythonSymlink);
           if (stats.isSymbolicLink()) {
             const target = fs.readlinkSync(pythonSymlink);
-            const resolvedPath = path.resolve(path.dirname(pythonSymlink), target);
+            const resolvedPath = path.resolve(
+              path.dirname(pythonSymlink),
+              target
+            );
 
             // If symlink points outside bundle, remove it
             if (!resolvedPath.startsWith(bundlePath)) {
@@ -103,7 +124,51 @@ exports.default = async function afterPack(context) {
             }
           }
         } catch (error) {
-          console.warn(`Warning: Could not process ${pythonName} symlink: ${error.message}`);
+          console.warn(
+            `Warning: Could not process ${pythonName} symlink: ${error.message}`
+          );
+        }
+      }
+    }
+  }
+
+  // Clean Python symlinks in terminal_venv/bin (same as venv/bin)
+  const terminalVenvBinDir = path.join(prebuiltPath, 'terminal_venv', 'bin');
+  if (fs.existsSync(terminalVenvBinDir)) {
+    const pythonNames = [
+      'python',
+      'python3',
+      'python3.10',
+      'python3.11',
+      'python3.12',
+    ];
+    const bundlePath = path.resolve(appPath);
+
+    for (const pythonName of pythonNames) {
+      const pythonSymlink = path.join(terminalVenvBinDir, pythonName);
+
+      if (fs.existsSync(pythonSymlink)) {
+        try {
+          const stats = fs.lstatSync(pythonSymlink);
+          if (stats.isSymbolicLink()) {
+            const target = fs.readlinkSync(pythonSymlink);
+            const resolvedPath = path.resolve(
+              path.dirname(pythonSymlink),
+              target
+            );
+
+            // If symlink points outside bundle, remove it
+            if (!resolvedPath.startsWith(bundlePath)) {
+              console.log(
+                `Removing invalid terminal_venv ${pythonName} symlink: ${target}`
+              );
+              fs.unlinkSync(pythonSymlink);
+            }
+          }
+        } catch (error) {
+          console.warn(
+            `Warning: Could not process terminal_venv ${pythonName} symlink: ${error.message}`
+          );
         }
       }
     }
@@ -127,7 +192,10 @@ exports.default = async function afterPack(context) {
             const resolvedPath = path.resolve(path.dirname(fullPath), target);
             const bundlePath = path.resolve(bundleRoot);
 
-            if (!fs.existsSync(resolvedPath) || !resolvedPath.startsWith(bundlePath)) {
+            if (
+              !fs.existsSync(resolvedPath) ||
+              !resolvedPath.startsWith(bundlePath)
+            ) {
               console.log(`Removing invalid symlink: ${fullPath} -> ${target}`);
               fs.unlinkSync(fullPath);
             }
@@ -147,5 +215,12 @@ exports.default = async function afterPack(context) {
   }
 
   cleanSymlinks(prebuiltPath, appPath);
+
+  // Also clean symlinks in backend directory (e.g., backend/workspace/.initial_env)
+  const backendPath = path.join(resourcesPath, 'backend');
+  if (fs.existsSync(backendPath)) {
+    cleanSymlinks(backendPath, appPath);
+  }
+
   console.log('✅ Symlink cleanup completed');
 };
