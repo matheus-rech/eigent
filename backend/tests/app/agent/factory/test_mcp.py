@@ -35,6 +35,7 @@ async def test_mcp_agent_creation(sample_chat_data):
         patch(f"{_mod}.McpSearchToolkit") as mock_mcp_search_toolkit,
         patch(f"{_mod}.get_mcp_tools") as mock_get_mcp_tools,
         patch(f"{_mod}.get_task_lock"),
+        patch("app.agent.toolkit.human_toolkit.get_task_lock"),
     ):
         # Mock toolkit instances
         mock_mcp_search_toolkit.return_value.get_tools.return_value = []
