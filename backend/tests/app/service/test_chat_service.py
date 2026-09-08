@@ -647,7 +647,9 @@ class TestChatServiceAgentOperations:
         mock_camel_agent.step.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_new_agent_model_creation(self, sample_chat_data):
+    async def test_new_agent_model_creation(
+        self, sample_chat_data, mock_task_lock
+    ):
         """Test new_agent_model creates agent with proper configuration."""
         options = Chat(**sample_chat_data)
         agent_data = NewAgent(
@@ -665,6 +667,10 @@ class TestChatServiceAgentOperations:
             patch("app.service.chat_service.get_mcp_tools", return_value=[]),
             patch(
                 "app.service.chat_service.agent_model", return_value=mock_agent
+            ),
+            patch(
+                "app.agent.toolkit.human_toolkit.get_task_lock",
+                return_value=mock_task_lock,
             ),
         ):
             result = await new_agent_model(agent_data, options)
